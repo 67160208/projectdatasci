@@ -2,34 +2,24 @@ import streamlit as st
 import pandas as pd
 import joblib
 import os
-
-# --- นำเข้าเครื่องมือที่จำเป็นสำหรับอ่านโมเดล (สำคัญมาก!) ---
 import sklearn
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
-from sklearn.ensemble import RandomForestClassifier
 
-# --- ตั้งค่าหน้าเว็บ ---
+# --- 1. ตั้งค่าหน้าเว็บ ---
 st.set_page_config(page_title="Adult Income Prediction", page_icon="💰")
 st.title("💰 ระบบทำนายรายได้ประชากร")
 
-# --- โหลดโมเดล ---
+# --- 2. โหลดโมเดล ---
 @st.cache_resource
 def load_model():
     base_path = os.path.dirname(__file__)
     model_path = os.path.join(base_path, 'salary_pipeline.pkl')
-    
     if os.path.exists(model_path):
-        # ใช้การโหลดแบบระบุว่าถ้าหาคลาสไม่เจอให้ลองเช็คใน sklearn
         return joblib.load(model_path)
-    else:
-        st.error(f"❌ หาไฟล์โมเดลไม่เจอที่: {model_path}")
-        return None
+    return None
 
 model = load_model()
 
-# --- ส่วนรับข้อมูลและทำนายผล (เหมือนเดิม) ---
+# --- 3. ส่วนรับข้อมูลจากผู้ใช้ ---
 if model is not None:
     st.subheader("กรอกข้อมูลเพื่อทำนายรายได้")
     col1, col2 = st.columns(2)
@@ -42,31 +32,30 @@ if model is not None:
         occupation = st.selectbox("อาชีพ", ['Adm-clerical', 'Exec-managerial', 'Handlers-cleaners', 'Prof-specialty', 'Other-service', 'Sales', 'Craft-repair', 'Transport-moving', 'Farming-fishing', 'Machine-op-inspct', 'Tech-support', 'Protective-serv', 'Armed-Forces', 'Priv-house-serv'])
         hours = st.slider("ชั่วโมงทำงาน/สัปดาห์", 1, 99, 40)
 
-   if st.button("ทำนายผลรายได้", use_container_width=True):
-        # 1. สร้าง Dictionary ข้อมูลให้ครบ 14 คอลัมน์ตามที่โมเดลต้องการ
-        # สำหรับคอลัมน์ที่ไม่มีในหน้าเว็บ ให้ใส่ค่ามาตรฐาน (Median หรือ Mode) ลงไปก่อนครับ
+    # --- 4. ปุ่มทำนายผล (แก้ไขย่อหน้าใหม่ให้ตรงกัน) ---
+    st.markdown("---")
+    if st.button("ทำนายผลรายได้", use_container_width=True):
+        # สร้างข้อมูลให้ครบ 14 คอลัมน์ตามที่โมเดลต้องการ
         data_dict = {
             'age': [age],
             'workclass': [workclass],
-            'fnlwgt': [189778],            # ค่าสมมติ (Median ของชุดข้อมูล)
+            'fnlwgt': [189778],
             'education': [education],
-            'education-num': [10],         # ค่าสมมติ
+            'education-num': [10],
             'marital-status': [marital_status],
             'occupation': [occupation],
-            'relationship': ['Husband'],    # ค่าสมมติ
-            'race': ['White'],             # ค่าสมมติ
-            'sex': ['Male'],               # ค่าสมมติ
-            'capital-gain': [0],           # ค่าสมมติ
-            'capital-loss': [0],           # ค่าสมมติ
+            'relationship': ['Husband'],
+            'race': ['White'],
+            'sex': ['Male'],
+            'capital-gain': [0],
+            'capital-loss': [0],
             'hours-per-week': [hours],
-            'native-country': ['United-States'] # ค่าสมมติ
+            'native-country': ['United-States']
         }
         
-        # 2. แปลงเป็น DataFrame
         input_data = pd.DataFrame(data_dict)
         
-        # 3. เรียงลำดับคอลัมน์ให้ตรงเป๊ะกับที่โมเดลจำได้
-        # (สำคัญมาก! ถ้าลำดับสลับกัน ผลจะเพี้ยนทันที)
+        # เรียงลำดับคอลัมน์ให้ตรงเป๊ะ
         feature_order = [
             'age', 'workclass', 'fnlwgt', 'education', 'education-num',
             'marital-status', 'occupation', 'relationship', 'race', 'sex',
@@ -74,10 +63,12 @@ if model is not None:
         ]
         input_data = input_data[feature_order]
 
-        # 4. ทำนายผล
+        # ทำนาย
         res = model.predict(input_data)[0]
         
         if res == 1:
-            st.success("🎉 รายได้น่าจะมากกว่า $50,000 ต่อปี")
+            st.success("🎉 คาดการณ์รายได้: **มากกว่า $50,000 ต่อปี**")
         else:
-            st.info("📊 รายได้น่าจะน้อยกว่าหรือเท่ากับ $50,000 ต่อปี")
+            st.info("📊 คาดการณ์รายได้: **น้อยกว่าหรือเท่ากับ $50,000 ต่อปี**")
+else:
+    st.error("❌ ไม่สามารถโหลดโมเดลได้ กรุณาตรวจสอบไฟล์ salary_pipeline.pkl")
