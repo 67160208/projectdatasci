@@ -3,18 +3,25 @@ import pandas as pd
 import joblib
 import os
 
+# --- นำเข้าเครื่องมือที่จำเป็นสำหรับอ่านโมเดล (สำคัญมาก!) ---
+import sklearn
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
+from sklearn.ensemble import RandomForestClassifier
+
 # --- ตั้งค่าหน้าเว็บ ---
 st.set_page_config(page_title="Adult Income Prediction", page_icon="💰")
 st.title("💰 ระบบทำนายรายได้ประชากร")
 
-# --- โหลดโมเดล (ปรับให้หาไฟล์ที่วางอยู่คู่กับ app.py เลย) ---
+# --- โหลดโมเดล ---
 @st.cache_resource
 def load_model():
     base_path = os.path.dirname(__file__)
-    # แก้จุดนี้: ไม่ต้องมีคำว่า 'model_artifacts' แล้ว เพราะพี่วางไฟล์ไว้ข้างนอก
     model_path = os.path.join(base_path, 'salary_pipeline.pkl')
     
     if os.path.exists(model_path):
+        # ใช้การโหลดแบบระบุว่าถ้าหาคลาสไม่เจอให้ลองเช็คใน sklearn
         return joblib.load(model_path)
     else:
         st.error(f"❌ หาไฟล์โมเดลไม่เจอที่: {model_path}")
@@ -22,7 +29,7 @@ def load_model():
 
 model = load_model()
 
-# --- ส่วนรับข้อมูลและทำนายผล ---
+# --- ส่วนรับข้อมูลและทำนายผล (เหมือนเดิม) ---
 if model is not None:
     st.subheader("กรอกข้อมูลเพื่อทำนายรายได้")
     col1, col2 = st.columns(2)
