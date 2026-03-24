@@ -3,23 +3,22 @@ import pandas as pd
 import joblib
 import os
 
-# --- 1. ตั้งค่าหน้าเว็บให้สวยงาม ---
+# --- 1. ตั้งค่าหน้าเว็บ ---
 st.set_page_config(page_title="Adult Income Prediction", page_icon="💰", layout="centered")
 
 st.markdown("""
     <style>
-    .main {
-        background-color: #f5f7f9;
-    }
+    .main { background-color: #f5f7f9; }
     .stButton>button {
         width: 100%;
         border-radius: 5px;
         height: 3em;
         background-color: #FF4B4B;
         color: white;
+        font-weight: bold;
     }
     </style>
-    """, unsafe_allow_html=True) # แก้ไขจาก unsafe_content_label เป็น unsafe_allow_html
+    """, unsafe_allow_html=True)
 
 st.title("💰 ระบบทำนายรายได้ประชากร")
 st.write("โปรเจกต์วิเคราะห์ข้อมูลรายได้จากปัจจัยทางสังคมและอาชีพ")
@@ -47,19 +46,22 @@ if model is not None:
                                    ['Private', 'Local-gov', 'Self-emp-inc', 'Self-emp-not-inc', 'State-gov', 'Without-pay', 'Federal-gov'])
             education = st.selectbox("ระดับการศึกษา (Education)", 
                                    ['Bachelors', 'Some-college', '11th', 'HS-grad', 'Prof-school', 'Assoc-acdm', 'Assoc-voc', '9th', '7th-8th', '12th', 'Masters', '1st-4th', '10th', 'Doctorate', '5th-6th', 'Preschool'])
+            sex = st.selectbox("เพศ (Sex)", ['Male', 'Female'])
+            cap_gain = st.number_input("กำไรจากทรัพย์สิน (Capital Gain)", min_value=0, max_value=99999, value=0, help="คนที่มีรายได้สูงส่วนใหญ่มักมีค่านี้มากกว่า 5,000")
         
         with col2:
             marital_status = st.selectbox("สถานภาพ (Marital Status)", 
-                                        ['Never-married', 'Married-civ-spouse', 'Divorced', 'Married-spouse-absent', 'Separated', 'Married-AF-spouse', 'Widowed'])
+                                        ['Married-civ-spouse', 'Never-married', 'Divorced', 'Married-spouse-absent', 'Separated', 'Married-AF-spouse', 'Widowed'])
+            relationship = st.selectbox("ความสัมพันธ์ (Relationship)", 
+                                      ['Husband', 'Wife', 'Own-child', 'Unmarried', 'Not-in-family', 'Other-relative'])
             occupation = st.selectbox("กลุ่มอาชีพ (Occupation)", 
-                                    ['Adm-clerical', 'Exec-managerial', 'Handlers-cleaners', 'Prof-specialty', 'Other-service', 'Sales', 'Craft-repair', 'Transport-moving', 'Farming-fishing', 'Machine-op-inspct', 'Tech-support', 'Protective-serv', 'Armed-Forces', 'Priv-house-serv'])
+                                    ['Exec-managerial', 'Prof-specialty', 'Adm-clerical', 'Handlers-cleaners', 'Other-service', 'Sales', 'Craft-repair', 'Transport-moving', 'Farming-fishing', 'Machine-op-inspct', 'Tech-support', 'Protective-serv', 'Armed-Forces', 'Priv-house-serv'])
             hours = st.slider("ชั่วโมงทำงานต่อสัปดาห์", 1, 99, 40)
 
     st.markdown("---")
 
     # --- 4. ส่วนคำนวณและทำนายผล ---
     if st.button("🔍 วิเคราะห์รายได้"):
-        # รายชื่อคอลัมน์ทั้ง 96 อันที่โมเดลต้องการ
         all_features = [
             'age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week',
             'workclass_Local-gov', 'workclass_Private', 'workclass_Self-emp-inc', 'workclass_Self-emp-not-inc', 'workclass_State-gov', 'workclass_Without-pay',
@@ -75,7 +77,7 @@ if model is not None:
 
         input_df['age'] = age
         input_df['fnlwgt'] = 189778
-        input_df['capital-gain'] = 0
+        input_df['capital-gain'] = cap_gain
         input_df['capital-loss'] = 0
         input_df['hours-per-week'] = hours
         
@@ -87,15 +89,20 @@ if model is not None:
         }
         input_df['education-num'] = edu_map.get(education, 10)
 
+        # เติมค่า One-Hot Encoding
         for col, val in [('workclass', workclass), ('education', education), 
-                         ('marital-status', marital_status), ('occupation', occupation)]:
+                         ('marital-status', marital_status), ('occupation', occupation),
+                         ('relationship', relationship)]:
             target = f"{col}_{val}"
             if target in all_features:
                 input_df[target] = 1
 
-        input_df['relationship_Not-in-family'] = 1
+        # เพศ (ใช้ logic sex_Male: 1=Male, 0=Female)
+        if sex == 'Male':
+            input_df['sex_Male'] = 1
+
+        # ค่ามาตรฐานอื่นๆ
         input_df['race_White'] = 1
-        input_df['sex_Male'] = 1
         input_df['native-country_United-States'] = 1
 
         try:
@@ -112,6 +119,4 @@ if model is not None:
 else:
     st.error("❌ ไม่สามารถเชื่อมต่อกับฐานข้อมูลโมเดลได้")
 
-st.sidebar.markdown("---")
-st.sidebar.write("📌 **Project Info:**")
 st.sidebar.info("ระบบทำนายรายได้ประชากร | Random Forest Classifier")
