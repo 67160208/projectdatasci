@@ -19,7 +19,7 @@ st.markdown("""
         color: white;
     }
     </style>
-    """, unsafe_content_label=True)
+    """, unsafe_allow_html=True) # แก้ไขจาก unsafe_content_label เป็น unsafe_allow_html
 
 st.title("💰 ระบบทำนายรายได้ประชากร")
 st.write("โปรเจกต์วิเคราะห์ข้อมูลรายได้จากปัจจัยทางสังคมและอาชีพ")
@@ -59,7 +59,7 @@ if model is not None:
 
     # --- 4. ส่วนคำนวณและทำนายผล ---
     if st.button("🔍 วิเคราะห์รายได้"):
-        # รายชื่อคอลัมน์ทั้ง 96 อันที่โมเดลต้องการ (ห้ามสะกดผิดแม้แต่ตัวเดียว)
+        # รายชื่อคอลัมน์ทั้ง 96 อันที่โมเดลต้องการ
         all_features = [
             'age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week',
             'workclass_Local-gov', 'workclass_Private', 'workclass_Self-emp-inc', 'workclass_Self-emp-not-inc', 'workclass_State-gov', 'workclass_Without-pay',
@@ -71,17 +71,14 @@ if model is not None:
             'native-country_Canada', 'native-country_China', 'native-country_Columbia', 'native-country_Cuba', 'native-country_Dominican-Republic', 'native-country_Ecuador', 'native-country_El-Salvador', 'native-country_England', 'native-country_France', 'native-country_Germany', 'native-country_Greece', 'native-country_Guatemala', 'native-country_Haiti', 'native-country_Holand-Netherlands', 'native-country_Honduras', 'native-country_Hong', 'native-country_Hungary', 'native-country_India', 'native-country_Iran', 'native-country_Ireland', 'native-country_Italy', 'native-country_Jamaica', 'native-country_Japan', 'native-country_Laos', 'native-country_Mexico', 'native-country_Nicaragua', 'native-country_Outlying-US(Guam-USVI-etc)', 'native-country_Peru', 'native-country_Philippines', 'native-country_Poland', 'native-country_Portugal', 'native-country_Puerto-Rico', 'native-country_Scotland', 'native-country_South', 'native-country_Taiwan', 'native-country_Thailand', 'native-country_Trinadad&Tobago', 'native-country_United-States', 'native-country_Vietnam', 'native-country_Yugoslavia'
         ]
 
-        # สร้าง DataFrame เริ่มต้นเป็น 0 ทั้งหมด
         input_df = pd.DataFrame(0, index=[0], columns=all_features)
 
-        # เติมข้อมูล Numerical
         input_df['age'] = age
-        input_df['fnlwgt'] = 189778  # ค่าเฉลี่ยกลาง
+        input_df['fnlwgt'] = 189778
         input_df['capital-gain'] = 0
         input_df['capital-loss'] = 0
         input_df['hours-per-week'] = hours
         
-        # Mapping education เป็นตัวเลข (เพื่อให้โมเดลแม่นยำขึ้น)
         edu_map = {
             'Bachelors': 13, 'Some-college': 10, '11th': 7, 'HS-grad': 9, 
             'Prof-school': 15, 'Assoc-acdm': 12, 'Assoc-voc': 11, '9th': 5, 
@@ -90,23 +87,19 @@ if model is not None:
         }
         input_df['education-num'] = edu_map.get(education, 10)
 
-        # เติมข้อมูล Categorical (One-Hot Encoding)
         for col, val in [('workclass', workclass), ('education', education), 
                          ('marital-status', marital_status), ('occupation', occupation)]:
             target = f"{col}_{val}"
             if target in all_features:
                 input_df[target] = 1
 
-        # ตั้งค่า Default สำหรับข้อมูลที่ไม่ได้กรอกหน้าเว็บ
         input_df['relationship_Not-in-family'] = 1
         input_df['race_White'] = 1
         input_df['sex_Male'] = 1
         input_df['native-country_United-States'] = 1
 
-        # ทำนายผล
         try:
             prediction = model.predict(input_df)[0]
-            
             st.subheader("🏁 ผลการวิเคราะห์:")
             if prediction == 1:
                 st.success("💰 คาดการณ์รายได้: **มากกว่า $50,000 ต่อปี**")
@@ -117,8 +110,8 @@ if model is not None:
             st.error(f"เกิดข้อผิดพลาดในการคำนวณ: {e}")
 
 else:
-    st.error("❌ ไม่สามารถเชื่อมต่อกับฐานข้อมูลโมเดลได้ (Check salary_pipeline.pkl)")
+    st.error("❌ ไม่สามารถเชื่อมต่อกับฐานข้อมูลโมเดลได้")
 
 st.sidebar.markdown("---")
 st.sidebar.write("📌 **Project Info:**")
-st.sidebar.info("ระบบทำนายรายได้ประชากรจากฐานข้อมูล Census 1994 โดยใช้เทคนิค Random Forest Classifier")
+st.sidebar.info("ระบบทำนายรายได้ประชากร | Random Forest Classifier")
