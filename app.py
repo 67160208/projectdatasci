@@ -3,10 +3,10 @@ import pandas as pd
 import joblib
 import os
 
-# --- 1. ตั้งค่าหน้าจอ ---
+# --- 1. ตั้งค่าหน้าเว็บ ---
 st.set_page_config(page_title="Adult Income Prediction", page_icon="💰", layout="centered")
 st.title("💰 ระบบทำนายรายได้ประชากร")
-st.write("วิเคราะห์ด้วยระบบ Random Forest Pipeline (Auto Scaling & Encoding)")
+st.write("โมเดล Random Forest Pipeline (อ้างอิงตามไฟล์ project_datascii.ipynb)")
 
 # --- 2. โหลดโมเดล Pipeline ---
 @st.cache_resource
@@ -33,6 +33,7 @@ if pipeline is not None:
             cap_gain = st.number_input("กำไร (Capital Gain)", 0, 99999, 10000)
 
         with col2:
+            # 🚩 สังเกตชื่อตัวแปร marital กับ country ผมจะส่งเข้า DataFrame ด้วยชื่อที่มีขีดกลาง
             marital = st.selectbox("สถานภาพ", ['Married-civ-spouse', 'Never-married', 'Divorced', 'Separated', 'Widowed', 'Married-spouse-absent', 'Married-AF-spouse'])
             occupation = st.selectbox("อาชีพ", ['Exec-managerial', 'Prof-specialty', 'Adm-clerical', 'Sales', 'Craft-repair', 'Transport-moving', 'Farming-fishing', 'Machine-op-inspct', 'Tech-support', 'Protective-serv', 'Handlers-cleaners', 'Other-service', 'Priv-house-serv'])
             relationship = st.selectbox("ความสัมพันธ์", ['Husband', 'Wife', 'Own-child', 'Unmarried', 'Not-in-family', 'Other-relative'])
@@ -42,17 +43,16 @@ if pipeline is not None:
         submit = st.form_submit_button("🔍 วิเคราะห์รายได้", use_container_width=True)
 
     if submit:
-        # Mapping ระดับการศึกษาเป็นตัวเลข
-        edu_map = {'Preschool': 1, '1st-4th': 2, '5th-6th': 3, '7th-8th': 4, '9th': 5, '10th': 6, '11th': 7, '12th': 8, 'HS-grad': 9, 'Some-college': 10, 'Assoc-voc': 11, 'Assoc-acdm': 12, 'Bachelors': 13, 'Masters': 14, 'Prof-school': 15, 'Doctorate': 16}
+        # 🚩 หัวใจสำคัญ: ชื่อคอลัมน์ต้องมีขีดกลาง (-) ตามที่พี่เขียนไว้ใน Notebook เซลล์ที่ 3
+        edu_num_map = {'Bachelors': 13, 'Masters': 14, 'Doctorate': 16, 'HS-grad': 9, 'Some-college': 10}
         
-        # 🚩 ข้อมูลที่ส่งให้ Pipeline (ชื่อคอลัมน์ต้องมีขีดกลาง '-' ตามที่เทรนมา)
         raw_data = pd.DataFrame([{
             'age': age,
             'workclass': workclass,
             'fnlwgt': 200000, 
             'education': education,
-            'education-num': edu_map.get(education, 10),
-            'marital-status': marital, # ใช้ขีดกลาง
+            'education-num': edu_num_map.get(education, 10),
+            'marital-status': marital,  # <--- ต้องมีขีดกลางตาม Notebook
             'occupation': occupation,
             'relationship': relationship,
             'race': 'White',
@@ -60,21 +60,18 @@ if pipeline is not None:
             'capital-gain': cap_gain,
             'capital-loss': 0,
             'hours-per-week': hours,
-            'native-country': country # ใช้ขีดกลาง
+            'native-country': country  # <--- ต้องมีขีดกลางตาม Notebook
         }])
 
         try:
-            # ทำนายผล
             prediction = pipeline.predict(raw_data)[0]
-            
             st.markdown("---")
             if prediction == 1:
                 st.success("💰 ผลการวิเคราะห์: **มากกว่า $50,000 ต่อปี**")
                 st.balloons()
             else:
                 st.info("📊 ผลการวิเคราะห์: **น้อยกว่าหรือเท่ากับ $50,000 ต่อปี**")
-                st.warning("หมายเหตุ: ปัจจัยด้านความสัมพันธ์และสถานภาพสมรสมีผลสูงมากต่อโมเดลนี้")
         except Exception as e:
-            st.error(f"เกิดข้อผิดพลาดในการคำนวณ: {e}")
+            st.error(f"เกิดข้อผิดพลาด: {e}")
 else:
-    st.error("❌ ไม่สามารถโหลดโมเดลได้ (โปรดเช็คไฟล์ salary_pipeline.pkl)")
+    st.error("❌ ไม่สามารถโหลดไฟล์ salary_pipeline.pkl ได้")
