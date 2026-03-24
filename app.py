@@ -3,12 +3,12 @@ import pandas as pd
 import joblib
 import os
 
-# --- 1. ตั้งค่าหน้าจอ ---
+# --- 1. ตั้งค่าหน้าเว็บ ---
 st.set_page_config(page_title="Adult Income Prediction", page_icon="💰", layout="centered")
 st.title("💰 ระบบทำนายรายได้ประชากร")
-st.write("โมเดล Random Forest Pipeline (รวมเครื่องมือแปลงข้อมูลอัตโนมัติ)")
+st.write("โมเดล Random Forest Pipeline (อ้างอิงจากไฟล์ project_datascii.ipynb)")
 
-# --- 2. โหลดโมเดล Pipeline (ตัวเดียวจบ) ---
+# --- 2. โหลดโมเดล Pipeline (มัดรวมทุกอย่างไว้ในไฟล์เดียวแล้ว) ---
 @st.cache_resource
 def load_pipeline():
     base_path = os.path.dirname(__file__)
@@ -21,7 +21,7 @@ pipeline = load_pipeline()
 
 # --- 3. ส่วนรับข้อมูลจากผู้ใช้ ---
 if pipeline is not None:
-    with st.form("my_form"):
+    with st.form("input_form"):
         st.subheader("📊 กรอกข้อมูลส่วนบุคคล")
         col1, col2 = st.columns(2)
         
@@ -30,7 +30,7 @@ if pipeline is not None:
             workclass = st.selectbox("ประเภทงาน", ['Private', 'Self-emp-inc', 'Self-emp-not-inc', 'Local-gov', 'State-gov', 'Federal-gov', 'Without-pay'])
             education = st.selectbox("การศึกษา", ['Bachelors', 'Masters', 'Doctorate', 'HS-grad', 'Some-college', 'Assoc-acdm', 'Assoc-voc', '9th', '7th-8th', '12th', '1st-4th', '10th', '5th-6th', 'Preschool'])
             sex = st.selectbox("เพศ", ['Male', 'Female'])
-            cap_gain = st.number_input("กำไร (Capital Gain)", 0, 99999, 10000)
+            cap_gain = st.number_input("กำไร (Capital Gain)", 0, 99999, 15000)
 
         with col2:
             marital = st.selectbox("สถานภาพ", ['Married-civ-spouse', 'Never-married', 'Divorced', 'Separated', 'Widowed', 'Married-spouse-absent', 'Married-AF-spouse'])
@@ -45,14 +45,14 @@ if pipeline is not None:
         # Mapping ระดับการศึกษาเป็นตัวเลข (ตรงตามไฟล์ Notebook ของพี่)
         edu_map = {'Preschool': 1, '1st-4th': 2, '5th-6th': 3, '7th-8th': 4, '9th': 5, '10th': 6, '11th': 7, '12th': 8, 'HS-grad': 9, 'Some-college': 10, 'Assoc-voc': 11, 'Assoc-acdm': 12, 'Bachelors': 13, 'Masters': 14, 'Prof-school': 15, 'Doctorate': 16}
         
-        # 🚩 หัวใจสำคัญ: ส่งข้อมูล 14 คอลัมน์ดั้งเดิม ห้ามใช้ชื่อขีดล่าง (_) ในบางตัว
+        # 🚩 หัวใจสำคัญ: ส่งข้อมูล 14 คอลัมน์ "ชื่อต้องเป๊ะ" (ห้ามมีขีดล่างแทนขีดกลาง)
         raw_data = pd.DataFrame([{
             'age': age,
             'workclass': workclass,
             'fnlwgt': 200000, 
             'education': education,
             'education-num': edu_map.get(education, 10),
-            'marital-status': marital,  # ใช้ขีดกลาง (-) ตามไฟล์ Notebook
+            'marital-status': marital,  # ต้องใช้ขีดกลาง (-)
             'occupation': occupation,
             'relationship': relationship,
             'race': 'White',
@@ -60,21 +60,23 @@ if pipeline is not None:
             'capital-gain': cap_gain,
             'capital-loss': 0,
             'hours-per-week': hours,
-            'native-country': country  # ใช้ขีดกลาง (-) ตามไฟล์ Notebook
+            'native-country': country  # ต้องใช้ขีดกลาง (-)
         }])
 
         try:
-            # 🎯 Pipeline จะจัดการเรื่อง Scaling และ Encoding ให้เองอัตโนมัติ
+            # 🎯 Pipeline จะจัดการเรื่อง Scaling และ Encoding ให้เองทั้งหมด
             prediction = pipeline.predict(raw_data)[0]
-            # แอบดูความน่าจะเป็น (Debug)
-            prob = pipeline.predict_proba(raw_data)[0]
             
             st.markdown("---")
             if prediction == 1:
-                st.success(f"🎉 คาดการณ์รายได้: **มากกว่า $50,000 ต่อปี** (ความมั่นใจ {prob[1]*100:.2f}%)")
+                st.success("💰 ผลการวิเคราะห์: **มากกว่า $50,000 ต่อปี**")
                 st.balloons()
             else:
-                st.info(f"📊 คาดการณ์รายได้: **น้อยกว่าหรือเท่ากับ $50,000 ต่อปี** (ความมั่นใจ {prob[0]*100:.2f}%)")
+                st.info("📊 ผลการวิเคราะห์: **น้อยกว่าหรือเท่ากับ $50,000 ต่อปี**")
+                
+            # ส่วนเช็คข้อมูล (พี่ลบทิ้งได้ตอนส่งงานจริง)
+            with st.expander("ดูข้อมูลที่ส่งให้โมเดล"):
+                st.write(raw_data)
                 
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาด: {e}")
