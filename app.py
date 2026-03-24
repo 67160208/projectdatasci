@@ -6,6 +6,7 @@ import os
 # --- 1. ตั้งค่าหน้าเว็บ ---
 st.set_page_config(page_title="Adult Income Prediction", page_icon="💰", layout="centered")
 st.title("💰 ระบบทำนายรายได้ประชากร")
+st.write("ทำนายผลด้วยระบบ Random Forest Pipeline (รวม Scaling & Encoding)")
 
 # --- 2. โหลด Pipeline ---
 @st.cache_resource
@@ -38,8 +39,7 @@ if pipeline is not None:
         country = st.selectbox("ประเทศ", ['United-States', 'Mexico', 'Philippines', 'Germany', 'Canada', 'Thailand', 'Other'])
 
     if st.button("🔍 วิเคราะห์รายได้", use_container_width=True):
-        # 🚩 ส่งข้อมูลดิบ 14 คอลัมน์ (ห้ามขาด ห้ามเกิน ห้ามสะกดผิด)
-        # Pipeline จะทำ Scaling และ One-Hot ให้เองอัตโนมัติ!
+        # 🚩 ต้องสร้าง DataFrame ให้มี 14 คอลัมน์ "ชื่อเป๊ะๆ" เหมือนในไฟล์ CSV ต้นฉบับ
         edu_num_map = {'Bachelors': 13, 'Masters': 14, 'Doctorate': 16, 'HS-grad': 9, 'Some-college': 10}
         
         raw_data = pd.DataFrame([{
@@ -60,7 +60,9 @@ if pipeline is not None:
         }])
 
         try:
+            # 🎯 ให้ Pipeline จัดการแปลงร่างข้อมูล (Scaling & One-Hot) ให้เองอัตโนมัติ
             prediction = pipeline.predict(raw_data)[0]
+            
             st.markdown("---")
             if prediction == 1:
                 st.success("🎉 คาดการณ์รายได้: **มากกว่า $50,000 ต่อปี**")
@@ -70,4 +72,4 @@ if pipeline is not None:
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาด: {e}")
 else:
-    st.error("❌ หาไฟล์ salary_pipeline.pkl ไม่เจอ")
+    st.error("❌ ไม่สามารถโหลดไฟล์ salary_pipeline.pkl ได้")
