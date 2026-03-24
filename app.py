@@ -5,11 +5,9 @@ import os
 
 # --- 1. ตั้งค่าหน้าเว็บ ---
 st.set_page_config(page_title="Adult Income Prediction", page_icon="💰", layout="centered")
-
 st.title("💰 ระบบทำนายรายได้ประชากร")
-st.write("ทายผลรายได้ด้วยโมเดล Random Forest Pipeline (รวม Scaling & Encoding)")
 
-# --- 2. โหลด Pipeline (มัดรวมทุกอย่างไว้แล้ว) ---
+# --- 2. โหลด Pipeline ---
 @st.cache_resource
 def load_pipeline():
     base_path = os.path.dirname(__file__)
@@ -20,33 +18,36 @@ def load_pipeline():
 
 pipeline = load_pipeline()
 
-# --- 3. ส่วนรับข้อมูลจากผู้ใช้ (รับเป็นค่าดิบๆ) ---
+# --- 3. ส่วนรับข้อมูลจากผู้ใช้ ---
 if pipeline is not None:
     st.subheader("📊 กรอกข้อมูลเพื่อวิเคราะห์")
     col1, col2 = st.columns(2)
     
     with col1:
-        age = st.number_input("อายุ (Age)", 17, 90, 30)
+        age = st.number_input("อายุ (Age)", 17, 90, 45)
         workclass = st.selectbox("ประเภทงาน", ['Private', 'Local-gov', 'Self-emp-inc', 'Self-emp-not-inc', 'State-gov', 'Without-pay', 'Federal-gov'])
-        education = st.selectbox("การศึกษา", ['Bachelors', 'Some-college', '11th', 'HS-grad', 'Prof-school', 'Assoc-acdm', 'Assoc-voc', '9th', '7th-8th', '12th', 'Masters', '1st-4th', '10th', 'Doctorate', '5th-6th', 'Preschool'])
+        education = st.selectbox("การศึกษา", ['Bachelors', 'Masters', 'Doctorate', 'HS-grad', 'Some-college', 'Assoc-acdm', 'Assoc-voc', '9th', '7th-8th', '12th', '1st-4th', '10th', '5th-6th', 'Preschool'])
         sex = st.selectbox("เพศ", ['Male', 'Female'])
-        cap_gain = st.number_input("กำไร (Capital Gain)", 0, 99999, 0)
+        cap_gain = st.number_input("กำไร (Capital Gain)", 0, 99999, 10000)
 
     with col2:
-        marital = st.selectbox("สถานภาพ", ['Never-married', 'Married-civ-spouse', 'Divorced', 'Married-spouse-absent', 'Separated', 'Married-AF-spouse', 'Widowed'])
-        occupation = st.selectbox("อาชีพ", ['Adm-clerical', 'Exec-managerial', 'Handlers-cleaners', 'Prof-specialty', 'Other-service', 'Sales', 'Craft-repair', 'Transport-moving', 'Farming-fishing', 'Machine-op-inspct', 'Tech-support', 'Protective-serv', 'Armed-Forces', 'Priv-house-serv'])
+        marital = st.selectbox("สถานภาพ", ['Married-civ-spouse', 'Never-married', 'Divorced', 'Married-spouse-absent', 'Separated', 'Married-AF-spouse', 'Widowed'])
+        occupation = st.selectbox("อาชีพ", ['Exec-managerial', 'Prof-specialty', 'Adm-clerical', 'Handlers-cleaners', 'Other-service', 'Sales', 'Craft-repair', 'Transport-moving', 'Farming-fishing', 'Machine-op-inspct', 'Tech-support', 'Protective-serv', 'Armed-Forces', 'Priv-house-serv'])
         relationship = st.selectbox("ความสัมพันธ์", ['Husband', 'Wife', 'Own-child', 'Unmarried', 'Not-in-family', 'Other-relative'])
-        hours = st.slider("ชั่วโมงทำงานต่อสัปดาห์", 1, 99, 40)
+        hours = st.slider("ชั่วโมงทำงานต่อสัปดาห์", 1, 99, 45)
         country = st.selectbox("ประเทศ", ['United-States', 'Mexico', 'Philippines', 'Germany', 'Canada', 'Thailand', 'Other'])
 
     if st.button("🔍 วิเคราะห์รายได้", use_container_width=True):
-        # 🚩 หัวใจสำคัญ: ส่งข้อมูลดิบ 14 คอลัมน์ให้ตรงตามที่ Pipeline ต้องการ
+        # 🚩 ส่งข้อมูลดิบ 14 คอลัมน์ (ห้ามขาด ห้ามเกิน ห้ามสะกดผิด)
+        # Pipeline จะทำ Scaling และ One-Hot ให้เองอัตโนมัติ!
+        edu_num_map = {'Bachelors': 13, 'Masters': 14, 'Doctorate': 16, 'HS-grad': 9, 'Some-college': 10}
+        
         raw_data = pd.DataFrame([{
             'age': age,
             'workclass': workclass,
             'fnlwgt': 189778,
             'education': education,
-            'education-num': 10, # เดี๋ยว Pipeline จะไปจัดการเอง หรือพี่จะทำ Map มาใส่ก็ได้
+            'education-num': edu_num_map.get(education, 10),
             'marital-status': marital,
             'occupation': occupation,
             'relationship': relationship,
@@ -59,18 +60,14 @@ if pipeline is not None:
         }])
 
         try:
-            # Pipeline จะจัดการ Scaling (ลดขนาดตัวเลข) และ One-Hot ให้เองอัตโนมัติ!
             prediction = pipeline.predict(raw_data)[0]
-            
             st.markdown("---")
             if prediction == 1:
                 st.success("🎉 คาดการณ์รายได้: **มากกว่า $50,000 ต่อปี**")
                 st.balloons()
             else:
                 st.info("📊 คาดการณ์รายได้: **น้อยกว่าหรือเท่ากับ $50,000 ต่อปี**")
-                
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาด: {e}")
-            st.write("ลองตรวจสอบชื่อคอลัมน์ใน DataFrame ให้ตรงกับตอนเทรนนะครับ")
 else:
     st.error("❌ หาไฟล์ salary_pipeline.pkl ไม่เจอ")
