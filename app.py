@@ -3,9 +3,28 @@ import pandas as pd
 import joblib
 import os
 
-st.set_page_config(page_title="Adult Income Prediction", page_icon="💰")
-st.title("💰 ระบบทำนายรายได้ประชากร")
+# --- 1. ตั้งค่าหน้าเว็บให้สวยงาม ---
+st.set_page_config(page_title="Adult Income Prediction", page_icon="💰", layout="centered")
 
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f5f7f9;
+    }
+    .stButton>button {
+        width: 100%;
+        border-radius: 5px;
+        height: 3em;
+        background-color: #FF4B4B;
+        color: white;
+    }
+    </style>
+    """, unsafe_content_label=True)
+
+st.title("💰 ระบบทำนายรายได้ประชากร")
+st.write("โปรเจกต์วิเคราะห์ข้อมูลรายได้จากปัจจัยทางสังคมและอาชีพ")
+
+# --- 2. ฟังก์ชันโหลดโมเดล ---
 @st.cache_resource
 def load_model():
     base_path = os.path.dirname(__file__)
@@ -16,20 +35,31 @@ def load_model():
 
 model = load_model()
 
+# --- 3. ส่วนรับข้อมูลจากผู้ใช้ ---
 if model is not None:
-    st.subheader("กรอกข้อมูลเพื่อทำนายรายได้")
-    col1, col2 = st.columns(2)
-    with col1:
-        age = st.number_input("อายุ", min_value=17, max_value=90, value=30)
-        workclass = st.selectbox("ประเภทงาน", ['Private', 'Local-gov', 'Self-emp-inc', 'Self-emp-not-inc', 'State-gov', 'Without-pay', 'Federal-gov'])
-        education = st.selectbox("การศึกษา", ['Bachelors', 'Some-college', '11th', 'HS-grad', 'Prof-school', 'Assoc-acdm', 'Assoc-voc', '9th', '7th-8th', '12th', 'Masters', '1st-4th', '10th', 'Doctorate', '5th-6th', 'Preschool'])
-    with col2:
-        marital_status = st.selectbox("สถานภาพ", ['Never-married', 'Married-civ-spouse', 'Divorced', 'Married-spouse-absent', 'Separated', 'Married-AF-spouse', 'Widowed'])
-        occupation = st.selectbox("อาชีพ", ['Adm-clerical', 'Exec-managerial', 'Handlers-cleaners', 'Prof-specialty', 'Other-service', 'Sales', 'Craft-repair', 'Transport-moving', 'Farming-fishing', 'Machine-op-inspct', 'Tech-support', 'Protective-serv', 'Armed-Forces', 'Priv-house-serv'])
-        hours = st.slider("ชั่วโมงทำงาน/สัปดาห์", 1, 99, 40)
+    with st.container():
+        st.subheader("📊 กรอกข้อมูลส่วนบุคคล")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            age = st.number_input("อายุ (Age)", min_value=17, max_value=90, value=30)
+            workclass = st.selectbox("ประเภทงาน (Workclass)", 
+                                   ['Private', 'Local-gov', 'Self-emp-inc', 'Self-emp-not-inc', 'State-gov', 'Without-pay', 'Federal-gov'])
+            education = st.selectbox("ระดับการศึกษา (Education)", 
+                                   ['Bachelors', 'Some-college', '11th', 'HS-grad', 'Prof-school', 'Assoc-acdm', 'Assoc-voc', '9th', '7th-8th', '12th', 'Masters', '1st-4th', '10th', 'Doctorate', '5th-6th', 'Preschool'])
+        
+        with col2:
+            marital_status = st.selectbox("สถานภาพ (Marital Status)", 
+                                        ['Never-married', 'Married-civ-spouse', 'Divorced', 'Married-spouse-absent', 'Separated', 'Married-AF-spouse', 'Widowed'])
+            occupation = st.selectbox("กลุ่มอาชีพ (Occupation)", 
+                                    ['Adm-clerical', 'Exec-managerial', 'Handlers-cleaners', 'Prof-specialty', 'Other-service', 'Sales', 'Craft-repair', 'Transport-moving', 'Farming-fishing', 'Machine-op-inspct', 'Tech-support', 'Protective-serv', 'Armed-Forces', 'Priv-house-serv'])
+            hours = st.slider("ชั่วโมงทำงานต่อสัปดาห์", 1, 99, 40)
 
-    if st.button("ทำนายผลรายได้", use_container_width=True):
-        # 1. รายชื่อคอลัมน์ทั้ง 96 อันที่โมเดลต้องการ (จาก Error Log ของพี่)
+    st.markdown("---")
+
+    # --- 4. ส่วนคำนวณและทำนายผล ---
+    if st.button("🔍 วิเคราะห์รายได้"):
+        # รายชื่อคอลัมน์ทั้ง 96 อันที่โมเดลต้องการ (ห้ามสะกดผิดแม้แต่ตัวเดียว)
         all_features = [
             'age', 'fnlwgt', 'education-num', 'capital-gain', 'capital-loss', 'hours-per-week',
             'workclass_Local-gov', 'workclass_Private', 'workclass_Self-emp-inc', 'workclass_Self-emp-not-inc', 'workclass_State-gov', 'workclass_Without-pay',
@@ -41,35 +71,54 @@ if model is not None:
             'native-country_Canada', 'native-country_China', 'native-country_Columbia', 'native-country_Cuba', 'native-country_Dominican-Republic', 'native-country_Ecuador', 'native-country_El-Salvador', 'native-country_England', 'native-country_France', 'native-country_Germany', 'native-country_Greece', 'native-country_Guatemala', 'native-country_Haiti', 'native-country_Holand-Netherlands', 'native-country_Honduras', 'native-country_Hong', 'native-country_Hungary', 'native-country_India', 'native-country_Iran', 'native-country_Ireland', 'native-country_Italy', 'native-country_Jamaica', 'native-country_Japan', 'native-country_Laos', 'native-country_Mexico', 'native-country_Nicaragua', 'native-country_Outlying-US(Guam-USVI-etc)', 'native-country_Peru', 'native-country_Philippines', 'native-country_Poland', 'native-country_Portugal', 'native-country_Puerto-Rico', 'native-country_Scotland', 'native-country_South', 'native-country_Taiwan', 'native-country_Thailand', 'native-country_Trinadad&Tobago', 'native-country_United-States', 'native-country_Vietnam', 'native-country_Yugoslavia'
         ]
 
-        # 2. สร้าง DataFrame เริ่มต้นเป็น 0 ทั้งหมด
+        # สร้าง DataFrame เริ่มต้นเป็น 0 ทั้งหมด
         input_df = pd.DataFrame(0, index=[0], columns=all_features)
 
-        # 3. เติมข้อมูลตัวเลข
+        # เติมข้อมูล Numerical
         input_df['age'] = age
-        input_df['fnlwgt'] = 189778 # ค่ากลาง
-        input_df['education-num'] = 10 # ค่ากลาง
+        input_df['fnlwgt'] = 189778  # ค่าเฉลี่ยกลาง
         input_df['capital-gain'] = 0
         input_df['capital-loss'] = 0
         input_df['hours-per-week'] = hours
+        
+        # Mapping education เป็นตัวเลข (เพื่อให้โมเดลแม่นยำขึ้น)
+        edu_map = {
+            'Bachelors': 13, 'Some-college': 10, '11th': 7, 'HS-grad': 9, 
+            'Prof-school': 15, 'Assoc-acdm': 12, 'Assoc-voc': 11, '9th': 5, 
+            '7th-8th': 4, '12th': 8, 'Masters': 14, '1st-4th': 2, 
+            '10th': 6, 'Doctorate': 16, '5th-6th': 3, 'Preschool': 1
+        }
+        input_df['education-num'] = edu_map.get(education, 10)
 
-        # 4. เติมข้อมูลหมวดหมู่ (เปลี่ยน 0 เป็น 1 ในช่องที่เลือก)
-        for col_name, value in [('workclass', workclass), ('education', education), 
-                                ('marital-status', marital_status), ('occupation', occupation)]:
-            target_col = f"{col_name}_{value}"
-            if target_col in all_features:
-                input_df[target_col] = 1
+        # เติมข้อมูล Categorical (One-Hot Encoding)
+        for col, val in [('workclass', workclass), ('education', education), 
+                         ('marital-status', marital_status), ('occupation', occupation)]:
+            target = f"{col}_{val}"
+            if target in all_features:
+                input_df[target] = 1
 
-        # ตั้งค่าค่าคงที่อื่นๆ (เช่น race, sex, native-country) ให้เป็นค่ามาตรฐาน
+        # ตั้งค่า Default สำหรับข้อมูลที่ไม่ได้กรอกหน้าเว็บ
+        input_df['relationship_Not-in-family'] = 1
         input_df['race_White'] = 1
         input_df['sex_Male'] = 1
         input_df['native-country_United-States'] = 1
 
-        # 5. ทำนาย
+        # ทำนายผล
         try:
             prediction = model.predict(input_df)[0]
+            
+            st.subheader("🏁 ผลการวิเคราะห์:")
             if prediction == 1:
-                st.success("🎉 คาดการณ์รายได้: **มากกว่า $50,000 ต่อปี**")
+                st.success("💰 คาดการณ์รายได้: **มากกว่า $50,000 ต่อปี**")
+                st.balloons()
             else:
                 st.info("📊 คาดการณ์รายได้: **น้อยกว่าหรือเท่ากับ $50,000 ต่อปี**")
         except Exception as e:
-            st.error(f"เกิดข้อผิดพลาด: {e}")
+            st.error(f"เกิดข้อผิดพลาดในการคำนวณ: {e}")
+
+else:
+    st.error("❌ ไม่สามารถเชื่อมต่อกับฐานข้อมูลโมเดลได้ (Check salary_pipeline.pkl)")
+
+st.sidebar.markdown("---")
+st.sidebar.write("📌 **Project Info:**")
+st.sidebar.info("ระบบทำนายรายได้ประชากรจากฐานข้อมูล Census 1994 โดยใช้เทคนิค Random Forest Classifier")
