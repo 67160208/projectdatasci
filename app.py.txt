@@ -1,0 +1,34 @@
+import streamlit as st
+import pandas as pd
+import joblib
+
+st.set_page_config(page_title="Adult Income Prediction", page_icon="💰")
+st.title("💰 ระบบทำนายรายได้ประชากร")
+
+# โหลดโมเดล
+@st.cache_resource
+def load_model():
+    return joblib.load("model_artifacts/salary_pipeline.pkl")
+
+model = load_model()
+
+# ส่วนรับข้อมูลจากผู้ใช้
+st.subheader("กรอกข้อมูลเพื่อทำนายรายได้")
+age = st.number_input("อายุ", min_value=17, max_value=90, value=30)
+workclass = st.selectbox("ประเภทงาน", ['State-gov', 'Self-emp-not-inc', 'Private', 'Federal-gov', 'Local-gov', 'Self-emp-inc', 'Without-pay'])
+education = st.selectbox("ระดับการศึกษา", ['Bachelors', 'HS-grad', '11th', 'Masters', '9th', 'Some-college', 'Assoc-acdm', 'Assoc-voc', '7th-8th', 'Doctorate', 'Prof-school', '5th-6th', '10th', '1st-4th', 'Preschool', '12th'])
+marital_status = st.selectbox("สถานภาพสมรส", ['Never-married', 'Married-civ-spouse', 'Divorced', 'Married-spouse-absent', 'Separated', 'Married-AF-spouse', 'Widowed'])
+occupation = st.selectbox("อาชีพ", ['Adm-clerical', 'Exec-managerial', 'Handlers-cleaners', 'Prof-specialty', 'Other-service', 'Sales', 'Craft-repair', 'Transport-moving', 'Farming-fishing', 'Machine-op-inspct', 'Tech-support', 'Protective-serv', 'Armed-Forces', 'Priv-house-serv'])
+hours_per_week = st.slider("ชั่วโมงทำงานต่อสัปดาห์", 1, 99, 40)
+
+if st.button("ทำนายผล"):
+    # สร้าง DataFrame จากข้อมูลที่กรอก
+    input_data = pd.DataFrame([[age, workclass, education, marital_status, occupation, hours_per_week]], 
+                             columns=['age', 'workclass', 'education', 'marital-status', 'occupation', 'hours-per-week'])
+
+    prediction = model.predict(input_data)[0]
+
+    if prediction == 1:
+        st.success("🎉 คาดการณ์รายได้: มากกว่า $50,000 ต่อปี")
+    else:
+        st.info("📊 คาดการณ์รายได้: น้อยกว่าหรือเท่ากับ $50,000 ต่อปี")
