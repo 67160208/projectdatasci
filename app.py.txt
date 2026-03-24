@@ -1,0 +1,16 @@
+import os
+
+# หาตำแหน่งปัจจุบันของไฟล์ app.py
+base_path = os.path.dirname(__file__)
+model_path = os.path.join(base_path, 'model_artifacts', 'salary_pipeline.pkl')
+
+# โหลดโมเดลด้วยตำแหน่งที่แน่นอน
+@st.cache_resource
+def load_model():
+    if os.path.exists(model_path):
+        return joblib.load(model_path)
+    else:
+        st.error(f"หาไฟล์ไม่เจอที่: {model_path}")
+        return None
+
+model = load_model()
