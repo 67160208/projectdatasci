@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
+import os
 
 # --- 1. การตั้งค่าหน้าเว็บ (Page Configuration) ---
 st.set_page_config(
@@ -13,7 +14,20 @@ st.set_page_config(
 # --- 2. โหลดโมเดล (Cache ไว้จะได้ไม่โหลดใหม่ทุกครั้งที่ขยับ UI) ---
 @st.cache_resource
 def load_model():
-    return joblib.load('salary_rf_pipeline.joblib')
+    # เลือก path ที่เป็นไปได้สำหรับไฟล์โมเดล
+    paths = [
+        os.path.join(os.path.dirname(__file__), 'salary_rf_pipeline.joblib'),
+        'salary_rf_pipeline.joblib',
+        '/mount/src/projectdatasci/salary_rf_pipeline.joblib',
+    ]
+
+    for p in paths:
+        if os.path.exists(p):
+            return joblib.load(p)
+
+    raise FileNotFoundError(
+        "ไม่พบไฟล์ salary_rf_pipeline.joblib ใน path ใด ๆ (ลองตรวจสอบว่าได้วางไฟล์ในโฟลเดอร์เดียวกับ app.py หรือใน repository แล้ว)"
+    )
 
 model = load_model()
 
