@@ -14,19 +14,37 @@ st.set_page_config(
 # --- 2. โหลดโมเดล (Cache ไว้จะได้ไม่โหลดใหม่ทุกครั้งที่ขยับ UI) ---
 @st.cache_resource
 def load_model():
-    # เลือก path ที่เป็นไปได้สำหรับไฟล์โมเดล
-    paths = [
+    # Model file names เป็น joblib ตามปกติ
+    candidates = [
         os.path.join(os.path.dirname(__file__), 'salary_rf_pipeline.joblib'),
         'salary_rf_pipeline.joblib',
         '/mount/src/projectdatasci/salary_rf_pipeline.joblib',
     ]
 
-    for p in paths:
+    # 1) ถ้ามีอยู่ local ก็โหลดทันที
+    for p in candidates:
         if os.path.exists(p):
             return joblib.load(p)
 
+    # 2) ถ้าไม่มี local ให้ลองดาวน์โหลดจาก URL ที่กำหนดไว้
+    #    ถ้าไม่กำหนด ENV ใช้ Google Drive direct download ที่ให้ไว้เป็น Default
+    default_model_url = "https://drive.google.com/uc?export=download&id=13ph4-aSXnTgJM9KP2G9Ra81gPU5pRUON"
+    model_url = os.environ.get('MODEL_URL', default_model_url)
+
+    local_name = os.path.join(os.path.dirname(__file__), os.path.basename(model_url))
+    try:
+        import urllib.request
+        st.info(f"ดาวน์โหลดโมเดลจาก URL: {model_url} ไปยัง {local_name}")
+        urllib.request.urlretrieve(model_url, local_name)
+        return joblib.load(local_name)
+    except Exception as e:
+        raise RuntimeError(f"โหลดโมเดลจาก MODEL_URL ไม่สำเร็จ: {e}\nURL ที่ใช้: {model_url}")
+
+    # 3) ถ้ายังไม่เจอ ให้แจ้งให้ชัด
+    checked = ', '.join(candidates)
     raise FileNotFoundError(
-        "ไม่พบไฟล์ salary_rf_pipeline.joblib ใน path ใด ๆ (ลองตรวจสอบว่าได้วางไฟล์ในโฟลเดอร์เดียวกับ app.py หรือใน repository แล้ว)"
+        "ไม่พบไฟล์โมเดล salary_rf_pipeline.joblib ใน path เหล่านี้: "
+        + checked + "\nกรุณาตั้งค่า MODEL_URL=... (S3/Drive) และรีสตาร์ท หรือวางไฟล์ไว้ใน folder เดียวกับ app.py"
     )
 
 model = load_model()
