@@ -42,10 +42,41 @@ if model is not None:
         occupation = st.selectbox("อาชีพ", ['Adm-clerical', 'Exec-managerial', 'Handlers-cleaners', 'Prof-specialty', 'Other-service', 'Sales', 'Craft-repair', 'Transport-moving', 'Farming-fishing', 'Machine-op-inspct', 'Tech-support', 'Protective-serv', 'Armed-Forces', 'Priv-house-serv'])
         hours = st.slider("ชั่วโมงทำงาน/สัปดาห์", 1, 99, 40)
 
-    if st.button("ทำนายผลรายได้", use_container_width=True):
-        input_data = pd.DataFrame([[age, workclass, education, marital_status, occupation, hours]], 
-                                 columns=['age', 'workclass', 'education', 'marital-status', 'occupation', 'hours-per-week'])
+   if st.button("ทำนายผลรายได้", use_container_width=True):
+        # 1. สร้าง Dictionary ข้อมูลให้ครบ 14 คอลัมน์ตามที่โมเดลต้องการ
+        # สำหรับคอลัมน์ที่ไม่มีในหน้าเว็บ ให้ใส่ค่ามาตรฐาน (Median หรือ Mode) ลงไปก่อนครับ
+        data_dict = {
+            'age': [age],
+            'workclass': [workclass],
+            'fnlwgt': [189778],            # ค่าสมมติ (Median ของชุดข้อมูล)
+            'education': [education],
+            'education-num': [10],         # ค่าสมมติ
+            'marital-status': [marital_status],
+            'occupation': [occupation],
+            'relationship': ['Husband'],    # ค่าสมมติ
+            'race': ['White'],             # ค่าสมมติ
+            'sex': ['Male'],               # ค่าสมมติ
+            'capital-gain': [0],           # ค่าสมมติ
+            'capital-loss': [0],           # ค่าสมมติ
+            'hours-per-week': [hours],
+            'native-country': ['United-States'] # ค่าสมมติ
+        }
+        
+        # 2. แปลงเป็น DataFrame
+        input_data = pd.DataFrame(data_dict)
+        
+        # 3. เรียงลำดับคอลัมน์ให้ตรงเป๊ะกับที่โมเดลจำได้
+        # (สำคัญมาก! ถ้าลำดับสลับกัน ผลจะเพี้ยนทันที)
+        feature_order = [
+            'age', 'workclass', 'fnlwgt', 'education', 'education-num',
+            'marital-status', 'occupation', 'relationship', 'race', 'sex',
+            'capital-gain', 'capital-loss', 'hours-per-week', 'native-country'
+        ]
+        input_data = input_data[feature_order]
+
+        # 4. ทำนายผล
         res = model.predict(input_data)[0]
+        
         if res == 1:
             st.success("🎉 รายได้น่าจะมากกว่า $50,000 ต่อปี")
         else:
