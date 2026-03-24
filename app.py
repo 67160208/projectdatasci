@@ -3,54 +3,47 @@ import pandas as pd
 import joblib
 import os
 
-st.set_page_config(page_title="Adult Income Prediction", page_icon="💰")
-st.title("💰 ระบบทำนายรายได้ประชากร")
+st.set_page_config(page_title="Salary Predictor", page_icon="💰")
+st.title("💰 ระบบทำนายรายได้ (ฉบับยกเครื่องใหม่)")
 
+# โหลดโรงงานอัจฉริยะ
 @st.cache_resource
-def load_data():
-    base_path = os.path.dirname(__file__)
-    model_path = os.path.join(base_path, 'salary_pipeline.pkl')
-    if os.path.exists(model_path):
-        return joblib.load(model_path)
-    return None
+def load_model():
+    return joblib.load('salary_pipeline.pkl')
 
-pipeline = load_data()
+model = load_model()
 
-if pipeline is not None:
-    st.subheader("📊 กรอกข้อมูลส่วนบุคคล")
-    col1, col2 = st.columns(2)
-    with col1:
-        age = st.number_input("อายุ", 17, 90, 45)
-        workclass = st.selectbox("ประเภทงาน", ['Private', 'Self-emp-inc', 'Local-gov', 'State-gov', 'Federal-gov'])
-        education = st.selectbox("การศึกษา", ['Masters', 'Doctorate', 'Bachelors', 'HS-grad', 'Some-college'])
-        sex = st.selectbox("เพศ", ['Male', 'Female'])
-        cap_gain = st.number_input("กำไร (Capital Gain)", 0, 99999, 15000)
-    with col2:
-        marital = st.selectbox("สถานภาพ", ['Married-civ-spouse', 'Never-married', 'Divorced'])
-        relationship = st.selectbox("ความสัมพันธ์", ['Husband', 'Wife', 'Own-child', 'Unmarried'])
-        occupation = st.selectbox("อาชีพ", ['Exec-managerial', 'Prof-specialty', 'Sales', 'Craft-repair'])
-        hours = st.slider("ชั่วโมงทำงานต่อสัปดาห์", 1, 99, 45)
-        country = st.selectbox("ประเทศเกิด", ['United-States', 'Thailand', 'Mexico'])
-
-    if st.button("🔍 วิเคราะห์รายได้", use_container_width=True):
-        # สร้างตาราง 14 คอลัมน์ดิบๆ ส่งเข้าท่อ Pipeline
-        raw_df = pd.DataFrame([{
-            'age': age, 'workclass': workclass, 'fnlwgt': 200000, 
-            'education': education, 'education-num': 14 if education == 'Masters' else 16 if education == 'Doctorate' else 13,
-            'marital-status': marital, 'occupation': occupation,
-            'relationship': relationship, 'race': 'White', 'sex': sex,
-            'capital-gain': cap_gain, 'capital-loss': 0,
-            'hours-per-week': hours, 'native-country': country
-        }])
-
-        try:
-            # 🎯 Pipeline จะจัดการ Scaling และ Encoding ให้เองทั้งหมด
-            prediction = pipeline.predict(raw_df)[0]
-            st.markdown("---")
-            if prediction == 1:
-                st.success("🎉 คาดการณ์รายได้: **มากกว่า $50,000 ต่อปี**")
+if model:
+    with st.form("main_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            age = st.number_input("อายุ", 17, 90, 45)
+            workclass = st.selectbox("ประเภทงาน", ['Private', 'Self-emp-inc', 'Local-gov', 'State-gov'])
+            edu = st.selectbox("การศึกษา", ['Bachelors', 'Masters', 'Doctorate', 'HS-grad'])
+            cap_gain = st.number_input("กำไร (Capital Gain)", 0, 99999, 15000)
+        with col2:
+            marital = st.selectbox("สถานภาพ", ['Married-civ-spouse', 'Never-married', 'Divorced'])
+            occ = st.selectbox("อาชีพ", ['Exec-managerial', 'Prof-specialty', 'Sales'])
+            hours = st.slider("ชั่วโมงทำงาน/สัปดาห์", 1, 99, 45)
+            sex = st.selectbox("เพศ", ['Male', 'Female'])
+        
+        if st.form_submit_button("🔍 วิเคราะห์ผล"):
+            # 🚩 สร้างข้อมูลดิบ 14 คอลัมน์ส่งเข้าโรงงาน
+            data = pd.DataFrame([{
+                'age': age, 'workclass': workclass, 'fnlwgt': 200000,
+                'education': edu, 'education-num': 13, # ตัวเลขสมมติ
+                'marital-status': marital, 'occupation': occ,
+                'relationship': 'Husband' if sex == 'Male' else 'Wife',
+                'race': 'White', 'sex': sex,
+                'capital-gain': cap_gain, 'capital-loss': 0,
+                'hours-per-week': hours, 'native-country': 'United-States'
+            }])
+            
+            # ให้ Pipeline จัดการ Scaling และ Encoding เอง!
+            result = model.predict(data)[0]
+            
+            if result == 1:
+                st.success("🎉 รายได้มากกว่า $50,000")
                 st.balloons()
             else:
-                st.info("📊 คาดการณ์รายได้: **น้อยกว่าหรือเท่ากับ $50,000 ต่อปี**")
-        except Exception as e:
-            st.error(f"เกิดข้อผิดพลาด: {e}")
+                st.info("📊 รายได้น้อยกว่าหรือเท่ากับ $50,000")
