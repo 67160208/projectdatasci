@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import joblib
 import os
-import sklearn
 
 # --- 1. ตั้งค่าหน้าเว็บ ---
 st.set_page_config(page_title="Adult Income Prediction", page_icon="💰")
@@ -32,10 +31,9 @@ if model is not None:
         occupation = st.selectbox("อาชีพ", ['Adm-clerical', 'Exec-managerial', 'Handlers-cleaners', 'Prof-specialty', 'Other-service', 'Sales', 'Craft-repair', 'Transport-moving', 'Farming-fishing', 'Machine-op-inspct', 'Tech-support', 'Protective-serv', 'Armed-Forces', 'Priv-house-serv'])
         hours = st.slider("ชั่วโมงทำงาน/สัปดาห์", 1, 99, 40)
 
-    # --- 4. ปุ่มทำนายผล (แก้ไขย่อหน้าใหม่ให้ตรงกัน) ---
     st.markdown("---")
     if st.button("ทำนายผลรายได้", use_container_width=True):
-        # สร้างข้อมูลให้ครบ 14 คอลัมน์ตามที่โมเดลต้องการ
+        # 🚩 จุดสำคัญ: ชื่อคอลัมน์ต้องตรงกับ metadata.json เป๊ะๆ (สังเกตเครื่องหมาย - )
         data_dict = {
             'age': [age],
             'workclass': [workclass],
@@ -55,7 +53,7 @@ if model is not None:
         
         input_data = pd.DataFrame(data_dict)
         
-        # เรียงลำดับคอลัมน์ให้ตรงเป๊ะ
+        # เรียงลำดับคอลัมน์ให้ตรงตามที่โมเดลต้องการ (14 columns)
         feature_order = [
             'age', 'workclass', 'fnlwgt', 'education', 'education-num',
             'marital-status', 'occupation', 'relationship', 'race', 'sex',
@@ -63,12 +61,17 @@ if model is not None:
         ]
         input_data = input_data[feature_order]
 
-        # ทำนาย
-        res = model.predict(input_data)[0]
-        
-        if res == 1:
-            st.success("🎉 คาดการณ์รายได้: **มากกว่า $50,000 ต่อปี**")
-        else:
-            st.info("📊 คาดการณ์รายได้: **น้อยกว่าหรือเท่ากับ $50,000 ต่อปี**")
+        try:
+            # ทำนาย
+            res = model.predict(input_data)[0]
+            if res == 1:
+                st.success("🎉 คาดการณ์รายได้: **มากกว่า $50,000 ต่อปี**")
+            else:
+                st.info("📊 คาดการณ์รายได้: **น้อยกว่าหรือเท่ากับ $50,000 ต่อปี**")
+        except Exception as e:
+            st.error(f"เกิดข้อผิดพลาดในการทำนาย: {e}")
+            # แสดงชื่อคอลัมน์ที่โมเดลต้องการออกมาดูเพื่อเช็ค
+            if hasattr(model, 'feature_names_in_'):
+                st.write("โมเดลต้องการคอลัมน์ชื่อ:", list(model.feature_names_in_))
 else:
-    st.error("❌ ไม่สามารถโหลดโมเดลได้ กรุณาตรวจสอบไฟล์ salary_pipeline.pkl")
+    st.error("❌ ไม่สามารถโหลดโมเดลได้")
