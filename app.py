@@ -11,11 +11,7 @@ def load_data():
     base_path = os.path.dirname(__file__)
     model_path = os.path.join(base_path, 'salary_pipeline.pkl')
     if os.path.exists(model_path):
-        obj = joblib.load(model_path)
-        # ตรวจสอบว่าเป็น Pipeline หรือไม่
-        if not hasattr(obj, 'steps'):
-            st.error("⚠️ ไฟล์ .pkl ของพี่ไม่ใช่ Pipeline! ผลคำนวณจะไม่แม่นยำ โปรดทำตามสเต็ปที่ 1 ใน Colab ใหม่ครับ")
-        return obj
+        return joblib.load(model_path)
     return None
 
 pipeline = load_data()
@@ -28,15 +24,15 @@ if pipeline is not None:
         workclass = st.selectbox("ประเภทงาน", ['Private', 'Self-emp-inc', 'Local-gov', 'State-gov', 'Federal-gov'])
         education = st.selectbox("การศึกษา", ['Masters', 'Doctorate', 'Bachelors', 'HS-grad', 'Some-college'])
         sex = st.selectbox("เพศ", ['Male', 'Female'])
-        cap_gain = st.number_input("กำไร (Capital Gain)", 0, 99999, 20000)
+        cap_gain = st.number_input("กำไร (Capital Gain)", 0, 99999, 15000)
     with col2:
         marital = st.selectbox("สถานภาพ", ['Married-civ-spouse', 'Never-married', 'Divorced'])
         relationship = st.selectbox("ความสัมพันธ์", ['Husband', 'Wife', 'Own-child', 'Unmarried'])
-        occupation = st.selectbox("อาชีพ", ['Exec-managerial', 'Prof-specialty', 'Sales'])
-        hours = st.slider("ชั่วโมงทำงาน/สัปดาห์", 1, 99, 45)
-        country = st.selectbox("ประเทศ", ['United-States', 'Thailand', 'Mexico'])
+        occupation = st.selectbox("อาชีพ", ['Exec-managerial', 'Prof-specialty', 'Sales', 'Craft-repair'])
+        hours = st.slider("ชั่วโมงทำงานต่อสัปดาห์", 1, 99, 45)
+        country = st.selectbox("ประเทศเกิด", ['United-States', 'Thailand', 'Mexico'])
 
-    if st.button("🔍 วิเคราะห์รายได้"):
+    if st.button("🔍 วิเคราะห์รายได้", use_container_width=True):
         # สร้างตาราง 14 คอลัมน์ดิบๆ ส่งเข้าท่อ Pipeline
         raw_df = pd.DataFrame([{
             'age': age, 'workclass': workclass, 'fnlwgt': 200000, 
@@ -48,6 +44,7 @@ if pipeline is not None:
         }])
 
         try:
+            # 🎯 Pipeline จะจัดการ Scaling และ Encoding ให้เองทั้งหมด
             prediction = pipeline.predict(raw_df)[0]
             st.markdown("---")
             if prediction == 1:
